@@ -20,7 +20,6 @@ class ViewController: UIViewController , UIImagePickerControllerDelegate , UINav
         super.viewDidLoad()
         
         imagePicker.delegate = self
-        imagePicker.sourceType = .camera
         imagePicker.allowsEditing = false
         
     }
@@ -30,18 +29,48 @@ class ViewController: UIViewController , UIImagePickerControllerDelegate , UINav
         
         if let userPickImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage{
             imageView.image = userPickImage
+            
+            guard CIImage(image: userPickImage) != nil else {
+                fatalError("could not convert ui image to ci image")
+            }
+            
         }
-        
-        print(imageView.image)
         
         imagePicker.dismiss(animated: true)
         
     }
     
+    func detect(image: UIImage){
+        guard let model = try? VNCoreMLModel(for: Inceptionv3().model) else {fatalError("loading core ML error")}
+    }
+    
     @IBAction func cameraTapped(_ sender: UIBarButtonItem) {
-        let alert = UIAlert()
+        let alert = UIAlertController(title: "Mau ngambil gambar darimana?", message: "", preferredStyle: .alert)
+        let camera = UIAlertAction(title: "Kamera", style: .default){
+            camera in
+            
+            self.putImage(1)
+        }
+        let album = UIAlertAction(title: "Gallery", style: .default){
+            album in
+            
+            self.putImage(0)
+
+        }
         
-        present(imagePicker, animated: true)
+        alert.addAction(camera)
+        alert.addAction(album)
+        present(alert, animated: true)
+        
+    }
+    
+    func putImage(_ code : Int){
+        if code == 1{
+            self.imagePicker.sourceType = .camera
+        } else {
+            self.imagePicker.sourceType = .photoLibrary
+        }
+        present(self.imagePicker, animated: true)
     }
     
 }

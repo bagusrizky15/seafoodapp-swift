@@ -30,9 +30,11 @@ class ViewController: UIViewController , UIImagePickerControllerDelegate , UINav
         if let userPickImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage{
             imageView.image = userPickImage
             
-            guard CIImage(image: userPickImage) != nil else {
+            guard let ciImage = CIImage(image: userPickImage) else {
                 fatalError("could not convert ui image to ci image")
             }
+            
+            detect(image: ciImage)
             
         }
         
@@ -40,8 +42,30 @@ class ViewController: UIViewController , UIImagePickerControllerDelegate , UINav
         
     }
     
-    func detect(image: UIImage){
-        guard let model = try? VNCoreMLModel(for: Inceptionv3().model) else {fatalError("loading core ML error")}
+    func detect(image: CIImage){
+        guard let model = try? VNCoreMLModel(for: Inceptionv3().model) else {
+            fatalError("loading core ML error")
+        }
+        
+        let request = VNCoreMLRequest(model: model) { request, error in
+            guard let results = request.results as? [VNClassificationObservation] else {
+                fatalError("Model failed to process image")
+            }
+            
+            let percent = Float(results.first!.confidence)*100
+            let name = results.first?.identifier
+            let nameResult = name?.components(separatedBy: ",")[0]
+            self.navigationItem.title = "\(round(percent))% \(nameResult!)"
+            print(percent)
+            print(nameResult!)
+        }
+        
+        let handler = VNImageRequestHandler(ciImage: image)
+        do {
+            try handler.perform([request])
+        } catch {
+            print(error)
+        }
     }
     
     @IBAction func cameraTapped(_ sender: UIBarButtonItem) {
@@ -55,7 +79,7 @@ class ViewController: UIViewController , UIImagePickerControllerDelegate , UINav
             album in
             
             self.putImage(0)
-
+            
         }
         
         alert.addAction(camera)
